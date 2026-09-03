@@ -305,7 +305,12 @@ function ergebnistext(r){
     L.push("  Grundbedarf                    " + r.woche.grundbedarf + " h");
     L.push("  Gewohnheiten                   " + r.woche.gewohnheiten + " h");
     L.push("  = Verfuegungszeit              " + r.woche.verfuegung + " h");
-    L.push("     davon Zeitfresser           " + r.woche.fresser + " h (" + r.woche.fresser_anteil + " %)");
+    if (r.woche.fresser > r.woche.verfuegung)
+      L.push("     davon Zeitfresser           " + r.woche.fresser
+        + " h  (mehr als frei verfuegbar — ein Teil laeuft parallel)");
+    else
+      L.push("     davon Zeitfresser           " + r.woche.fresser
+        + " h (" + r.woche.fresser_anteil + " %)");
     L.push("     wirklich frei               " + r.woche.rest + " h");
     if (r.woche.ueberzogen > 0)
       L.push("  🔴 " + r.woche.ueberzogen + " h mehr als die Woche hat");
@@ -389,19 +394,30 @@ const fortschritt = () => Math.round(100 * seite / Math.max(N - 1, 1));
 const kopf = (t,u) => `<div class="bar"><i style="width:${fortschritt()}%"></i></div>
   <h2>${esc(u)}</h2><h1>${esc(t)}</h1>`;
 
-function render(anker){
-  /* 🔴 Frank 03.09.2026: "wollte eine Gewohnheit aufnehmen und speichern, dann kam
-     nichts mehr." Ursache: render() sprang bei JEDER Aktion an den Seitenanfang. Auf der
-     sehr langen Ergebnisseite sah der Eintrag deshalb aus, als waere nichts passiert —
-     er stand weit unten, der Blick oben. Mit Anker bleibt die Position erhalten. */
-  if (!anker) window.scrollTo(0,0);
-  if (seite === 0) return intro();
-  if (seite === 1) return situationsfrage();
-  if (seite - 1 <= SEITEN.length) return domseite(SEITEN[seite-2]);
-  if (seite === SEITEN.length + 2) return wochenfrage();
-  ergebnis();
-  if (anker){
-    const e = document.getElementById(anker);
+/* 🔴 Zwei Meldungen von Frank am 03.09.2026, beide dieselbe Ursache: render() sprang
+   bei JEDER Aktion an den Seitenanfang.
+   - "wollte eine Gewohnheit aufnehmen und speichern, dann kam nichts mehr" — der Eintrag
+     stand weit unten auf der Ergebnisseite, der Blick war oben.
+   - "bei einigen Boegen ist es, wenn man auf die untersten 2 Fragen antwortet, so, dass
+     der Cursor wieder hochspringt" — jede Antwort zeichnet die Bereichsseite neu.
+   Der Sprung nach oben gehoert zum SEITENWECHSEL, nicht zu jeder Aktion.
+     halten = true  -> Position exakt behalten (Antwort auf derselben Seite)
+     halten = "id"  -> zu diesem Abschnitt springen (Inventar, Verlauf)
+     halten = false -> an den Anfang (neue Seite) */
+function render(halten){
+  const y = (typeof window !== "undefined" && window.scrollY) || 0;
+  if (!halten) window.scrollTo(0,0);
+
+  if (seite === 0) intro();
+  else if (seite === 1) situationsfrage();
+  else if (seite - 1 <= SEITEN.length) domseite(SEITEN[seite-2]);
+  else if (seite === SEITEN.length + 2) wochenfrage();
+  else ergebnis();
+
+  if (halten === true){
+    window.scrollTo(0, y);
+  } else if (halten){
+    const e = document.getElementById(halten);
     if (e && e.scrollIntoView) e.scrollIntoView({block:'start'});
   }
 }
@@ -1035,7 +1051,7 @@ function verlaufBlock(r){
   return h;
 }
 
-function setz(pos,val){ antw[pos] = val; render(); }
+function setz(pos,val){ antw[pos] = val; render(true); }
 function weiter(){ seite++; render(); }
 function zurueck(){ if (seite > 0) seite--; render(); }
 seitenAufbauen();
