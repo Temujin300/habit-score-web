@@ -344,6 +344,9 @@ function auswerten(){
       .filter(k => k.ist < 50).sort((a,b) => a.ist - b.ist).slice(0,2);
   } else { r.kompetenz = null; r.kompetenz_schwach = []; }
   r.konsistenz = Math.round(1000 * AKTIV.filter(i => ist(i) >= 75).length / AKTIV.length) / 10;
+  // Wie viele Antworten stehen am oberen Anschlag? Ab etwa der Haelfte misst der
+  // Standardsatz die Person nicht mehr — dann ist das eigene Inventar der Weg.
+  r.decke = Math.round(100 * AKTIV.filter(i => ist(i) === 100).length / AKTIV.length);
 
   // Zeitbilanz: gerechnet, nicht gefragt.
   const aufb = AKTIV.filter(i => i.pol === '+'), abb = AKTIV.filter(i => i.pol === '−');
@@ -456,6 +459,15 @@ function ergebnistext(r){
   if (r.kompetenz !== null)
     L.push("KOMPETENZ       " + r.kompetenz + "  (wie du Gewohnheiten baust, geht NICHT in die Erfuellung ein)");
   L.push("");
+  const EK = erkenntnisse(r);
+  if (EK.length){
+    L.push("AUF EINEN BLICK");
+    EK.forEach((e,n) => {
+      L.push("  " + (n+1) + ". " + e.titel);
+      L.push("     " + e.text.replace(/<[^>]*>/g,"").replace(/&#8202;/g,"").replace(/\s+/g," ").trim());
+    });
+    L.push("");
+  }
   if (r.bereiche.length){
     L.push("ANSPRUCH GEGEN VERHALTEN");
     r.bereiche.forEach(x => L.push("  " + (BEREICH_LABEL[x.b] + "                          ").slice(0,26)
@@ -805,6 +817,108 @@ function zahl(feld, v){
 
 
 
+
+// Frank am 04.09.2026: "der schluss war ein wenig willkuerlich, eine nette
+// Abschlussseite eventuell mit den wichtigsten 3-5 Erkenntnissen koennte helfen".
+// Die Erkenntnisse werden nicht ausgewaehlt, sondern nach Schwere gerechnet —
+// jede traegt ihre eigene Zahl, damit nichts behauptet wird, was nicht dasteht.
+function erkenntnisse(r){
+  const E = [];
+  const add = (schwere, titel, text) => { if (schwere > 0) E.push({schwere, titel, text}); };
+
+  if (r.luecken.length){
+    const t = r.luecken[0];
+    add(t.luecke * t.wichtig / 50,
+      "Der Bereich, der dir wichtig ist und am wenigsten läuft",
+      `<b>${esc(t.label)}</b> hast du als „${esc((WICHTIG_SKALA.find(s => s[1] === t.wichtig)||['—'])[0])}“
+       eingeordnet und lebst ihn bei <b>${Math.round(t.gelebt/5)*5} von 100</b>. Das ist eine Lücke
+       von ${Math.round(t.luecke)} Punkten — die größte zwischen deinem Anspruch und deinem Verhalten.`);
+  }
+  if (r.ueberinvestiert.length){
+    const u = r.ueberinvestiert[0], d = Math.round(u.gelebt - u.wichtig);
+    add(d * 0.9,
+      "Und die Stelle, an der du mehr tust, als dir wichtig ist",
+      `<b>${esc(u.label)}</b> läuft bei <b>${Math.round(u.gelebt/5)*5}</b>, im Rang steht der Bereich
+       bei <b>${u.wichtig}</b>. ${d} Punkte Abstand. Das ist kein Fehler — es ist der Ort, an dem
+       Kraft liegt, die woanders fehlt.`);
+  }
+  const d = Math.round(10 * (r.aufbauen - r.abbauen)) / 10;
+  if (Math.abs(d) >= 8)
+    add(Math.abs(d) * 1.2,
+      d > 0 ? "Du baust auf, du legst nicht ab" : "Du legst ab, du baust nicht auf",
+      d > 0 ? `Aufbauen steht bei <b>${r.aufbauen}</b>, Abbauen bei <b>${r.abbauen}</b> —
+        ${d} Punkte Unterschied. Neues anzufangen fällt dir leichter, als Altes zu beenden.
+        Deine nächsten Schritte sollten das berücksichtigen.`
+       : `Abbauen steht bei <b>${r.abbauen}</b>, Aufbauen bei <b>${Math.abs(d)} Punkte darunter</b>.
+        Du räumst zuverlässig weg — was fehlt, ist das, was den Platz füllt.`);
+
+  if (r.kaskade.length){
+    const k = r.kaskade[0];
+    add(60 - k.ist,
+      "Eine Trägergewohnheit blockiert andere",
+      `„${esc(k.txt)}“ steht bei <b>${k.ist} von 100</b>. Solange das so bleibt, scheitern die
+       Gewohnheiten, die daran hängen — und es liegt nicht an denen. Nächster Schritt:
+       ${esc(k.schritt)}`);
+  }
+  if (r.fresser_top3.length && r.woche){
+    const f = r.fresser_top3[0];
+    add(f.stunden * 12,
+      "Wo deine Woche wirklich hingeht",
+      `„${esc(f.txt)}“ kostet dich <b>${f.stunden} Stunden pro Woche</b> — von
+       ${r.woche.rest} Stunden, die dir wirklich frei bleiben.`);
+  }
+  if (r.decke >= 45)
+    add(r.decke * 0.8,
+      "Dieser Fragensatz ist für dich zu leicht geworden",
+      `<b>${r.decke}&#8202;%</b> deiner Antworten stehen am oberen Anschlag. Er kann noch zeigen,
+       wo du schwach bist — aber nicht mehr, wo du besser wirst. Trag deine eigenen Gewohnheiten
+       unter „Werkzeuge“ ins Inventar ein, dann misst die nächste Runde dich statt den Durchschnitt.`);
+  if (r.kompetenz !== null && r.kompetenz < 50 && r.konsistenz < 50)
+    add((50 - r.kompetenz) * 1.5,
+      "Erst das Verfahren, dann die nächste Gewohnheit",
+      `Deine Gewohnheits-Kompetenz steht bei <b>${r.kompetenz}</b>, gehalten hast du
+       <b>${r.konsistenz}&#8202;%</b>. Beides niedrig heißt: die Art, wie du Änderungen angehst,
+       trägt nicht. Sie zu ändern ist wirksamer als die nächste Gewohnheit.`);
+  if (r.klassen_spanne >= 8){
+    const paare = KLASSEN.map(k => [KL[k], r.je_klasse[k]]).filter(x => x[1] > 0)
+      .sort((a,b) => a[1]-b[1]);
+    add(r.klassen_spanne * 1.1,
+      "Eine ganze Klasse bricht weg",
+      `<b>${esc(paare[0][0])}</b> steht bei ${paare[0][1]}, ${esc(paare[paare.length-1][0])}
+       bei ${paare[paare.length-1][1]}. Nicht einzelne Gewohnheiten scheitern bei dir,
+       sondern eine ganze Frequenzklasse.`);
+  }
+  const sd = r.schwaechste_domaene;
+  if (sd && sd.wert < 55)
+    add(60 - sd.wert,
+      "Deine schwächste Domäne",
+      `<b>${esc(dl(sd.name))}</b> steht bei <b>${Math.round(sd.wert/5)*5}</b> und liegt damit
+       deutlich unter allem anderen.`);
+
+  return E.sort((a,b) => b.schwere - a.schwere).slice(0, 5);
+}
+
+function fazitBlock(r){
+  const E = erkenntnisse(r);
+  return `<h3>Auf einen Blick</h3>
+  <p>Aus allem, was du beantwortet hast, bleiben diese ${E.length === 1 ? 'Erkenntnis' : E.length + ' Erkenntnisse'}
+  übrig. Sortiert danach, wie schwer sie wiegen — nicht danach, wie angenehm sie sind.</p>
+  ${E.map((e,n) => `<div class="card acc">
+    <div class="t"><span class="tag f">${n+1}</span>${esc(e.titel)}</div>
+    <div class="s" style="font-size:15px;color:var(--fg)">${e.text}</div>
+  </div>`).join('')}
+
+  <h3>Und jetzt konkret</h3>
+  ${r.vorschlaege.map(v => `<div class="card">
+    <div class="t"><span class="tag">${v.pol === '+' ? 'aufbauen' : 'ablegen'}</span>${esc(v.txt)}</div>
+    <div class="s">${esc(v.schritt)}</div></div>`).join('')}
+  <div class="card"><div class="s" style="font-size:15px;color:var(--fg)">
+  Mehr als zwei auf einmal geht schief. Nimm diese beiden bis
+  <b>${r.wiedermessung}</b> — dann misst du nach und siehst, ob sich etwas bewegt hat.</div></div>
+  <div class="nav" style="margin-top:20px">
+    <button class="go" onclick="setzErgSeite(3)">Ergebnis kopieren und sichern</button></div>`;
+}
+
 function kompetenzBlock(r){
   if (r.kompetenz === null) return '';
   const k = r.kompetenz, kons = r.konsistenz;
@@ -937,7 +1051,7 @@ const balken = (l,v) => `<div class="row"><span>${esc(l)}</span>
 // Das Ergebnis war eine einzige, sehr lange Seite. Frank am 04.09.2026: "am schluss
 // muss sehr lange runter gescrollt werden". Vier Reiter, gleiche Inhalte, gleiche
 // Reihenfolge — nur nicht mehr alles auf einmal.
-const ERG_REITER = ["Dein Stand", "Deine Zeit", "Einordnung", "Werkzeuge"];
+const ERG_REITER = ["Dein Stand", "Deine Zeit", "Einordnung", "Werkzeuge", "Auf einen Blick"];
 let ergSeite = 0;
 function setzErgSeite(n){ ergSeite = n; render(); }
 
@@ -1180,7 +1294,7 @@ function ergebnis(){
   const teile = voll.split("<!--SEITENWECHSEL-->");
   const kopfTeil = teile[0].slice(0, teile[0].indexOf('<h2>'));
   const seiteEins = teile[0].slice(teile[0].indexOf('<h2>'));
-  const inhalt = [seiteEins, teile[1], teile[2], teile[3]];
+  const inhalt = [seiteEins, teile[1], teile[2], teile[3], fazitBlock(r)];
   ergSeite = Math.min(ergSeite, inhalt.length - 1);
 
   app.innerHTML = kopfTeil
