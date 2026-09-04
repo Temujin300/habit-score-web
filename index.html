@@ -909,9 +909,27 @@ function fazitBlock(r){
   </div>`).join('')}
 
   <h3>Und jetzt konkret</h3>
-  ${r.vorschlaege.map(v => `<div class="card">
-    <div class="t"><span class="tag">${v.pol === '+' ? 'aufbauen' : 'ablegen'}</span>${esc(v.txt)}</div>
-    <div class="s">${esc(v.schritt)}</div></div>`).join('')}
+  <p>Einer zum Aufbauen, einer zum Ablegen — mit allem, was sie kosten und bringen.</p>
+  ${r.vorschlaege.map(v => `<div class="card acc">
+    <div class="t"><span class="tag ${v.pol === '+' ? 'f' : ''}">${
+      v.pol === '+' ? 'aufbauen' : 'ablegen'}</span>${
+      v.traeger ? '<span class="tag tr">Träger</span>' : ''}${esc(v.txt)}</div>
+    <div class="preis">
+      <div><div class="k">Zeit</div><div class="w ${v.zeit_h === 0 ? '' : (v.pol === '+' ? 'minus' : 'plus')}">${
+        v.zeit_h === 0 ? '—' : (v.pol === '+' ? '−' : '+') + v.zeit_h + ' h'}</div>
+        <div class="k" style="text-transform:none;letter-spacing:0;margin-top:2px">${
+        v.zeit_h === 0 ? 'kostet keine Zeit' : (v.pol === '+' ? 'pro Woche nötig' : 'pro Woche frei')}</div></div>
+      <div><div class="k">Energie</div><div class="w ${
+        v.energie.startsWith('gibt') ? 'plus' : (v.energie.startsWith('kostet') ? 'minus' : '')}">${
+        v.energie.startsWith('gibt') ? '+' : (v.energie.startsWith('kostet') ? '−' : '±')}</div>
+        <div class="k" style="text-transform:none;letter-spacing:0;margin-top:2px">${
+        esc(v.energie_label)}</div></div>
+      <div><div class="k">Stand</div><div class="w">${v.ist}</div>
+        <div class="k" style="text-transform:none;letter-spacing:0;margin-top:2px">von 100</div></div>
+    </div>
+    <div class="eff">${esc(v.effekt)}</div>
+    <div class="s" style="margin-top:10px"><b>Nächster Schritt:</b> ${esc(v.schritt)}</div>
+  </div>`).join('')}
   <div class="card"><div class="s" style="font-size:15px;color:var(--fg)">
   Mehr als zwei auf einmal geht schief. Nimm diese beiden bis
   <b>${r.wiedermessung}</b> — dann misst du nach und siehst, ob sich etwas bewegt hat.</div></div>
