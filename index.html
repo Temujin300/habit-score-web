@@ -53,6 +53,9 @@ color:var(--fg);border-radius:6px;padding:11px;font-size:15px;font-family:inheri
 input[type=number]{background:var(--card);border:1px solid var(--line);color:var(--fg);
 border-radius:6px;padding:13px;font-size:22px;width:150px;font-family:inherit}
 .big{font-size:70px;font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--gold)}
+.reiter{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
+.reiter button{flex:1 1 auto;min-width:110px;padding:11px 10px;font-size:13px;
+  letter-spacing:.04em;text-transform:uppercase}
 .stufe{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:8px}
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px;margin:26px 0}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
@@ -215,14 +218,20 @@ const TAGESKRITERIEN = [
 // hinter einer eigenen Zustimmung — das sind persoenliche Grenzen, keine
 // Gewohnheiten, und sie gehen niemanden ausser dem Ausfuellenden etwas an.
 const LEBENSREGELN = [
-  "Ich nehme keine Drogen.",
-  "Ich zahle nicht für Sex.",
-  "Ich spiele nicht um Geld.",
-  "Ich betrüge meinen Partner nicht.",
+  "Ich nehme keine illegalen Drogen.",
   "Ich rauche nicht.",
-  "Ich fahre nicht unter Alkoholeinfluss.",
+  "Ich fahre nie unter Alkohol- oder Drogeneinfluss.",
+  "Ich trinke nicht, um etwas zu betäuben.",
+  "Ich spiele nicht um Geld.",
+  "Ich mache keine Schulden für Konsum.",
+  "Ich nehme nichts, was mir nicht gehört.",
+  "Ich betrüge meinen Partner nicht.",
+  "Ich zahle nicht für Sex.",
+  "Ich werde niemandem gegenüber körperlich übergriffig.",
+  "Ich demütige niemanden, der sich nicht wehren kann.",
   "Ich lüge nicht in wichtigen Dingen.",
-  "Ich breche kein gegebenes Wort."];
+  "Ich breche kein gegebenes Wort.",
+  "Ich rede über Abwesende nicht anders als vor ihnen."];
 
 let wichtig = {}, komp = {}, regeln = {}, regelnAn = false;
 let SEITEN = [], N = 0, AKTIV = [];
@@ -847,9 +856,12 @@ function regelnBlock(){
   const gesetzt = LEBENSREGELN.filter((_,n) => regeln[n] !== undefined).length;
   const gehalten = LEBENSREGELN.filter((_,n) => regeln[n] === true).length;
   let h = `<h3 id="lebensregeln">Lebensregeln</h3>
-  <p>Acht Sätze, die keine Gewohnheiten sind, sondern Grenzen. Es gibt hier keinen
-  Prozentwert und keine Abstufung — man hält sie oder nicht. Sie gehen in keinen Score
-  ein und stehen auch nicht im Kopiertext.</p>
+  <p>${LEBENSREGELN.length} Sätze, die keine Gewohnheiten sind, sondern Grenzen. Es gibt
+  hier keinen Prozentwert und keine Abstufung — man hält sie oder nicht. Sie gehen in
+  keinen Score ein und stehen auch nicht im Kopiertext.</p>
+  <p class="hint">Eine Gewohnheit verbessert man in Schritten. Eine Grenze nicht: sie
+  steht oder sie steht nicht. Deshalb stehen sie hier getrennt von allem anderen — und
+  deshalb sind es bewusst allgemeine Sätze, keine persönliche Liste.</p>
   <div class="nav" style="margin-top:0"><button class="${regelnAn ? 'ghost' : 'go'}"
     onclick="regelnUmschalten()">${regelnAn ? 'Ausblenden und verwerfen' : 'Für mich anzeigen'}</button></div>`;
   if (!regelnAn) return h;
@@ -922,10 +934,17 @@ function anspruchBlock(r){
 const balken = (l,v) => `<div class="row"><span>${esc(l)}</span>
   <span class="track"><i style="width:${v}%"></i></span><span class="v">${v}</span></div>`;
 
+// Das Ergebnis war eine einzige, sehr lange Seite. Frank am 04.09.2026: "am schluss
+// muss sehr lange runter gescrollt werden". Vier Reiter, gleiche Inhalte, gleiche
+// Reihenfolge — nur nicht mehr alles auf einmal.
+const ERG_REITER = ["Dein Stand", "Deine Zeit", "Einordnung", "Werkzeuge"];
+let ergSeite = 0;
+function setzErgSeite(n){ ergSeite = n; render(); }
+
 function ergebnis(){
   const r = auswerten(), z = r.zeit;
 
-  app.innerHTML = `<div class="bar"><i style="width:100%"></i></div>
+  const voll = `<div class="bar"><i style="width:100%"></i></div>
   <h2>Dein Ergebnis</h2>
   <div class="big">${r.erfuellung}</div><div class="stufe">${r.stufe}</div>
   <p style="margin-top:18px">So zuverlässig hältst du die ${AKTIV.length} Gewohnheiten,
@@ -996,6 +1015,7 @@ function ergebnis(){
     ${esc(dl(k.dom))} und alles, was daran hängt, mit nach unten.
     Nächster Schritt: ${esc(k.schritt)}</div></div>`).join('')}` : ''}
 
+<!--SEITENWECHSEL-->
   ${r.woche ? `<h3>Deine Woche</h3>
   <div class="card">
     <div class="stack">
@@ -1095,6 +1115,7 @@ function ergebnis(){
       esc(f.txt)}</div>
     <div class="s">Statt dessen: ${esc(f.ersatz)}</div></div>`).join('')}` : ''}
 
+<!--SEITENWECHSEL-->
   <h3>Die drei größten Hebel</h3>
   <p>Hier zählt der Aufwand mit: Wert geteilt durch Aufwand, mal das, was noch fehlt.</p>
   ${r.hebel_top3.map(i => `<div class="card acc">
@@ -1131,6 +1152,7 @@ function ergebnis(){
 
   ${kompetenzBlock(r)}
 
+<!--SEITENWECHSEL-->
   ${inventarBlock(r)}
 
   ${verlaufBlock(r)}
@@ -1154,6 +1176,25 @@ function ergebnis(){
     <button class="ghost" onclick="location.reload()">Noch einmal</button></div>
   <div class="copybox"><textarea id="erg" readonly>${esc(ergebnistext(r))}</textarea></div>
   <div class="foot">Habit Score v8 · Testset vom 03.09.2026 · ${AKTIV.length} Gewohnheiten · Messungen nur lokal in diesem Browser.</div>`;
+
+  const teile = voll.split("<!--SEITENWECHSEL-->");
+  const kopfTeil = teile[0].slice(0, teile[0].indexOf('<h2>'));
+  const seiteEins = teile[0].slice(teile[0].indexOf('<h2>'));
+  const inhalt = [seiteEins, teile[1], teile[2], teile[3]];
+  ergSeite = Math.min(ergSeite, inhalt.length - 1);
+
+  app.innerHTML = kopfTeil
+    + `<div class="reiter">${ERG_REITER.map((t,n) =>
+        `<button aria-pressed="${n === ergSeite}" onclick="setzErgSeite(${n})">${t}</button>`
+      ).join('')}</div>`
+    + inhalt[ergSeite]
+    + `<div class="nav" style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px">
+        ${ergSeite > 0 ? `<button class="ghost" onclick="setzErgSeite(${ergSeite-1})">← ${
+          esc(ERG_REITER[ergSeite-1])}</button>` : ''}
+        ${ergSeite < inhalt.length - 1 ? `<button class="go" onclick="setzErgSeite(${ergSeite+1})">${
+          esc(ERG_REITER[ergSeite+1])} →</button>` : ''}
+        ${ergSeite !== 3 ? `<button class="ghost" onclick="setzErgSeite(3)">Ergebnis kopieren</button>` : ''}
+      </div>`;
 }
 
 
