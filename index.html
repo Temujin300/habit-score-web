@@ -309,12 +309,12 @@ function auswerten(){
   // Die zehn Intelligenzen sind die Achse der ganzen Reihe — jeder Band ist eine. Sie
   // stehen seit dem 10.09.2026 auf mindestens zehn Fragen und tragen damit als Ansicht;
   // vorher waren es bei Inner Change zwei, und daraus laesst sich kein Wert bilden.
-  r.je_intelligenz = {}; r.n_intelligenz = {};
+  r.je_achse = {}; r.n_achse = {};
   // 🔴 Gewertet wird nach `achse` — was das Item MISST. Das Feld `intelligenz` sagt nur,
   // aus welchem Buch es stammt, und traegt die Leseempfehlung (Abgrenzung 10.09.2026).
   [...new Set(AKTIV.map(i => i.achse || i.intelligenz).filter(Boolean))].sort().forEach(k => {
     const sel = AKTIV.filter(i => (i.achse || i.intelligenz) === k);
-    r.je_intelligenz[k] = gew(sel); r.n_intelligenz[k] = sel.length; });
+    r.je_achse[k] = gew(sel); r.n_achse[k] = sel.length; });
 
   // Spannweite der Frequenzklassen. Liegen die drei Werte dicht beieinander, ist da
   // kein Muster — dann darf der Block auch nicht so tun, als gaebe es eines.
@@ -467,8 +467,8 @@ function auswerten(){
 
   const sd = Object.entries(r.je_domaene).sort((a,b) => a[1]-b[1])[0];
   r.schwaechste_domaene = {name:sd[0], wert:sd[1]};
-  const si = Object.entries(r.je_intelligenz).sort((a,b) => a[1]-b[1])[0];
-  r.schwaechste_intelligenz = si ? {name:si[0], wert:si[1]} : null;
+  const si = Object.entries(r.je_achse).sort((a,b) => a[1]-b[1])[0];
+  r.schwaechste_achse = si ? {name:si[0], wert:si[1]} : null;
   r.gewertet = AKTIV.length;
   r.leer = AKTIV.length === 0;
   return r;
@@ -602,9 +602,9 @@ function ergebnistext(r){
   L.push("NACH DOMAENE (auf Fuenferschritte gerundet, in Klammern die Zahl der Fragen)");
   L.push("");
   L.push("NACH INTELLIGENZ (auf Fuenferschritte gerundet, in Klammern die Zahl der Fragen)");
-  Object.entries(r.je_intelligenz).sort((a,b) => b[1]-a[1])
+  Object.entries(r.je_achse).sort((a,b) => b[1]-a[1])
     .forEach(([k,v]) => L.push("  " + k.padEnd(28)
-      + String(Math.round(v/5)*5).padStart(3) + "  (" + r.n_intelligenz[k] + ")"));
+      + String(Math.round(v/5)*5).padStart(3) + "  (" + r.n_achse[k] + ")"));
   L.push("");
   Object.entries(r.je_domaene).sort((a,b) => b[1]-a[1])
     .forEach(([k,v]) => L.push("  " + (dl(k)+"                            ").slice(0,28)
@@ -978,7 +978,7 @@ function erkenntnisse(r){
        bei ${paare[paare.length-1][1]}. Nicht einzelne Gewohnheiten scheitern bei dir,
        sondern eine ganze Frequenzklasse.`);
   }
-  const si = r.schwaechste_intelligenz;
+  const si = r.schwaechste_achse;
   if (si && si.wert < 55)
     add(60 - si.wert,
       "Deine schwächste Intelligenz",
@@ -1371,15 +1371,16 @@ function ergebnis(){
        schwächsten Klasse.`}</p>
   ${KLASSEN.map(k => balken(KL[k], r.je_klasse[k])).join('')}
 
-  <h3>Nach Intelligenz</h3>
-  <p>Jede der zehn Intelligenzen ist ein eigenes Feld — und jede steht hier auf mindestens
-  zehn Fragen. Schwächste: <b style="color:var(--gold)">${
-    r.schwaechste_intelligenz ? esc(r.schwaechste_intelligenz.name) : '—'}</b>.</p>
+  <h3>Nach Messachse</h3>
+  <p>Zehn Achsen, jede mit mindestens zehn Fragen. Gewertet wird danach, was eine Gewohnheit
+  <em>misst</em> — nicht danach, in welchem Buch sie vorkommt.
+  Schwächste: <b style="color:var(--gold)">${
+    r.schwaechste_achse ? esc(r.schwaechste_achse.name) : '—'}</b>.</p>
   <p class="hint">Das sagt nichts darüber, was du in einem Feld weißt, sondern nur, was du
   darin tust — und nur, soweit dieser Test danach fragt. Wer viel weiß und wenig davon
   umsetzt, steht hier trotzdem unten. Genau das ist der Punkt.</p>
-  ${Object.entries(r.je_intelligenz).sort((a,b) => b[1]-a[1])
-     .map(([k,v]) => balken(k + ' (' + r.n_intelligenz[k] + ')', Math.round(v/5)*5)).join('')}
+  ${Object.entries(r.je_achse).sort((a,b) => b[1]-a[1])
+     .map(([k,v]) => balken(k + ' (' + r.n_achse[k] + ')', Math.round(v/5)*5)).join('')}
 
   <h3>Nach Verhaltensdomäne</h3>
   <p>Dieselben Antworten, anders geschnitten: welche <em>Art</em> von Gewohnheit dir schwerfällt.
@@ -1621,7 +1622,7 @@ function messungBauen(r){
           zeit: new Date().toTimeString().slice(0,5),
           stand: TESTSET_STAND, situation: situation,
           erfuellung: r.erfuellung, fundament: r.fundament, konsistenz: r.konsistenz,
-          je_domaene: r.je_domaene, je_intelligenz: r.je_intelligenz, je_klasse: r.je_klasse,
+          je_domaene: r.je_domaene, je_achse: r.je_achse, je_intelligenz: r.je_achse, je_klasse: r.je_klasse,
           kompetenz: r.kompetenz, wichtig: {...wichtig},
           je_bereich: Object.fromEntries(r.bereiche.map(x => [x.b, x.gelebt])),
           bett: bettN, schlaf: schlafN, arbeit: arbeitW, grund: grundW,
