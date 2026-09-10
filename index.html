@@ -651,7 +651,15 @@ const kopf = (t,u) => `<div class="bar"><i style="width:${fortschritt()}%"></i><
      halten = false -> an den Anfang (neue Seite) */
 function render(halten){
   const y = (typeof window !== "undefined" && window.scrollY) || 0;
-  if (!halten) window.scrollTo(0,0);
+  if (!halten){
+    window.scrollTo(0,0);
+    // Eingebettet und auf derselben Domain: der Rahmen selbst scrollt nicht mehr, also
+    // muss die Seite darum herum an den Anfang des Rahmens.
+    try {
+      if (window.frameElement && window.frameElement.scrollIntoView)
+        window.frameElement.scrollIntoView({block:"start"});
+    } catch (e) {}
+  }
 
   if (seite === 0) intro();
   else if (seite === 1) situationsfrage();
@@ -685,6 +693,17 @@ function hoeheMelden(){
   const melde = () => {
     try {
       const h = Math.ceil(document.documentElement.scrollHeight);
+      // Liegt der Test auf derselben Domain wie die einbettende Seite — so wie auf
+      // yourmastermind.de —, darf er seinen eigenen Rahmen anfassen. Dann braucht die
+      // Seite kein Gegenstueck: der Rahmen waechst mit, es wird nur noch die Seite
+      // gescrollt, und der Wechsel der Ergebnis-Reiter landet oben statt in der Mitte.
+      const rahmen = window.frameElement;
+      if (rahmen){
+        rahmen.style.height = h + "px";
+        if (rahmen.parentElement && rahmen.parentElement.classList.contains("iyc-test-frame"))
+          rahmen.parentElement.style.height = h + "px";
+      }
+      // Fremde Domain: dann bleibt nur die Nachricht nach draussen.
       window.parent.postMessage({typ:"habitscore-hoehe", hoehe:h}, "*");
     } catch (e) {}
   };
