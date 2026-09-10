@@ -131,6 +131,17 @@ const DOM = {"Ernaehrung":"Ernährung","Vorsorge & Koerper":"Vorsorge & Körper"
  "Planung & Rueckschau":"Planung & Rückschau","Lernen & Fortbildung":"Lernen & Fortbildung",
  "Selbstreflexion & Emotion":"Selbstreflexion & Emotion"};
 const dl = d => DOM[d] || d;
+// Die Achsen stehen in den Daten als Kurzform („Energie", „Time", „Finanzielle"), gemischt
+// mit ausgeschriebenen Namen („Social Value", „Inner Core"). Untereinander im Ergebnis
+// sieht das aus wie ein Fehler — „Finanzielle" allein liest sich abgeschnitten. Angezeigt
+// wird deshalb der volle Name des jeweiligen Bandes, gerechnet wird unveraendert mit dem
+// Wert aus den Daten.
+const ACHSE_LABEL = {
+  "Energie": "Energieintelligenz", "Fitness": "Fitnessintelligenz",
+  "Planung": "Planungsintelligenz", "Time": "Time Transformation",
+  "Finanzielle": "Finanzielle Intelligenz", "Umsetzung": "Umsetzungsintelligenz",
+  "Leben": "Lebensintelligenz"};
+const al = a => ACHSE_LABEL[a] || a;
 const fl = f => FREQ[f] || f;
 
 function klasse(f){
@@ -600,7 +611,7 @@ function ergebnistext(r){
   L.push("");
   L.push("NACH INTELLIGENZ (auf Fuenferschritte gerundet, in Klammern die Zahl der Fragen)");
   Object.entries(r.je_achse).sort((a,b) => b[1]-a[1])
-    .forEach(([k,v]) => L.push("  " + k.padEnd(28)
+    .forEach(([k,v]) => L.push("  " + al(k).padEnd(28)
       + String(Math.round(v/5)*5).padStart(3) + "  (" + r.n_achse[k] + ")"));
   L.push("");
   Object.entries(r.je_domaene).sort((a,b) => b[1]-a[1])
@@ -979,7 +990,7 @@ function erkenntnisse(r){
   if (si && si.wert < 55)
     add(60 - si.wert,
       "Deine schwächste Intelligenz",
-      `<b>${esc(si.name)}</b> steht bei <b>${Math.round(si.wert/5)*5}</b> und liegt damit
+      `<b>${esc(al(si.name))}</b> steht bei <b>${Math.round(si.wert/5)*5}</b> und liegt damit
        deutlich unter allem anderen. Das ist eine ganze Ebene, die bei dir nicht gelebt
        wird — nicht eine einzelne Gewohnheit.`);
   const sd = r.schwaechste_domaene;
@@ -1372,12 +1383,12 @@ function ergebnis(){
   <p>Zehn Achsen, jede mit mindestens zehn Fragen. Gewertet wird danach, was eine Gewohnheit
   <em>misst</em> — nicht danach, in welchem Buch sie vorkommt.
   Schwächste: <b style="color:var(--gold)">${
-    r.schwaechste_achse ? esc(r.schwaechste_achse.name) : '—'}</b>.</p>
+    r.schwaechste_achse ? esc(al(r.schwaechste_achse.name)) : '—'}</b>.</p>
   <p class="hint">Das sagt nichts darüber, was du in einem Feld weißt, sondern nur, was du
   darin tust — und nur, soweit dieser Test danach fragt. Wer viel weiß und wenig davon
   umsetzt, steht hier trotzdem unten. Genau das ist der Punkt.</p>
   ${Object.entries(r.je_achse).sort((a,b) => b[1]-a[1])
-     .map(([k,v]) => balken(k + ' (' + r.n_achse[k] + ')', Math.round(v/5)*5)).join('')}
+     .map(([k,v]) => balken(al(k) + ' (' + r.n_achse[k] + ')', Math.round(v/5)*5)).join('')}
 
   <h3>Nach Verhaltensdomäne</h3>
   <p>Dieselben Antworten, anders geschnitten: welche <em>Art</em> von Gewohnheit dir schwerfällt.
