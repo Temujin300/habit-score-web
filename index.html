@@ -667,6 +667,34 @@ function render(halten){
     const e = document.getElementById(halten);
     if (e && e.scrollIntoView) e.scrollIntoView({block:'start'});
   }
+  hoeheMelden();
+}
+
+// Eingebettet auf yourmastermind.de: Die Seite kennt die Hoehe des Tests nicht und gibt
+// ihm einen festen Rahmen. Dann scrollt der Besucher IM Rahmen, und beim Wechsel der
+// Ergebnis-Reiter steht er mitten im naechsten statt an dessen Anfang. Deshalb meldet der
+// Test seine Hoehe nach jedem Zeichnen nach aussen; die Seite zieht den Rahmen mit.
+// Laeuft der Test in einem eigenen Fenster, passiert hier nichts.
+function eingebettet(){
+  try { return typeof window !== "undefined" && window.parent && window.parent !== window
+               && document.documentElement && typeof window.parent.postMessage === "function"; }
+  catch (e) { return false; }   // fremder Rahmen, Zugriff verboten — dann eben nicht
+}
+function hoeheMelden(){
+  if (!eingebettet()) return;
+  const melde = () => {
+    try {
+      const h = Math.ceil(document.documentElement.scrollHeight);
+      window.parent.postMessage({typ:"habitscore-hoehe", hoehe:h}, "*");
+    } catch (e) {}
+  };
+  melde();
+  // Bilder, Schriften und das Aufklappen von Belegen aendern die Hoehe noch danach.
+  setTimeout(melde, 60);
+  setTimeout(melde, 400);
+}
+if (eingebettet() && typeof ResizeObserver === "function"){
+  new ResizeObserver(() => hoeheMelden()).observe(document.documentElement);
 }
 
 function intro(){
