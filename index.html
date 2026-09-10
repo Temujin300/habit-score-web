@@ -98,6 +98,13 @@ margin-top:10px;padding-top:8px;font-style:italic}
 margin-right:6px;background:var(--gold)}
 .legend .d::before{background:var(--line)} .legend .b::before{background:var(--bad)}
 .copybox{margin-top:14px}
+.senden{max-width:520px;margin:14px 0 4px}
+.senden label{display:block;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 5px}
+.senden input[type=text],.senden input[type=email]{width:100%;background:#111;
+  border:1px solid var(--line);border-radius:6px;color:var(--fg);font-family:inherit;
+  font-size:15px;padding:11px 12px;margin:0 0 12px}
+.senden input:focus{outline:none;border-color:var(--gold)}
 textarea{width:100%;height:180px;background:#0F0E0D;border:1px solid var(--line);
 color:var(--dim);border-radius:6px;padding:12px;font:12px/1.5 ui-monospace,SFMono-Regular,
 Menlo,monospace;resize:vertical}
@@ -628,6 +635,49 @@ function ergebnistext(r){
   return L.join("\n");
 }
 
+// Uebertragung passiert ausschliesslich hier — der Nutzer traegt Name und Adresse ein und
+// drueckt. Bis dahin hat die Seite nichts gesendet, und das steht auch so im Intro.
+// Der Endpunkt ist der gemeinsame fuer alle Tests der Reihe (Freedom Score genauso),
+// damit die Ergebnisse spaeter zusammen auswertbar sind statt in vier Ablagen zu liegen.
+const SPEICHERN = "https://yourmastermind.de/tests/speichern.php";
+
+function schicken(btn){
+  const meldung = document.getElementById('sMeldung');
+  const name = (document.getElementById('sName')||{}).value || "";
+  const mail = (document.getElementById('sMail')||{}).value || "";
+  const sagen = (t, farbe) => { if (meldung){ meldung.textContent = t;
+    meldung.style.color = farbe || "var(--dim)"; } };
+  if (name.trim().length < 2) return sagen("Bitte trag deinen Namen ein.", "var(--bad)");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail.trim()))
+    return sagen("Die Mailadresse sieht nicht vollständig aus.", "var(--bad)");
+
+  const r = auswerten();
+  const satz = {
+    test: "habit-score",
+    name: name.trim(), mail: mail.trim(),
+    stand: TESTSET_STAND,
+    gesamt: r.erfuellung,
+    stufe: RANG.indexOf(r.stufe) + 1,
+    schwach: r.schwaechste_achse ? al(r.schwaechste_achse.name) : "",
+    achsen: Object.fromEntries(Object.entries(r.je_achse).map(([k,v]) => [al(k), v])),
+    kennzahlen: {erfuellung:r.erfuellung, fundament:r.fundament, konsistenz:r.konsistenz,
+                 kompetenz:r.kompetenz, decke:r.decke, gewertet:r.gewertet},
+    antworten: Object.fromEntries(AKTIV.map(i => [i.id, antw[i.pos]])),
+    text: ergebnistext(r),
+    web: (document.getElementById('sWeb')||{}).value || ""
+  };
+  if (btn) btn.disabled = true;
+  sagen("wird geschickt …");
+  fetch(SPEICHERN, {method:"POST", headers:{"Content-Type":"application/json"},
+                    body: JSON.stringify(satz)})
+    .then(a => a.ok ? a.text() : Promise.reject("HTTP " + a.status))
+    .then(() => sagen("Geschickt. Die Mail ist unterwegs — sieh auch im Spam nach.",
+                      "var(--ok)"))
+    .catch(f => { if (btn) btn.disabled = false;
+      sagen("Das hat nicht geklappt (" + f + "). Kopier dir den Text oben, dann geht "
+            + "nichts verloren.", "var(--bad)"); });
+}
+
 function kopieren(btn){
   const ta = document.getElementById('erg');
   ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
@@ -729,9 +779,10 @@ function intro(){
   app.innerHTML = `<div class="bar"><i style="width:0%"></i></div>
   <h2>Habit Score</h2><h1>Was hältst du wirklich?</h1>
   <p class="hint" style="border:1px solid var(--line);border-radius:8px;padding:12px 14px;
-  margin-bottom:18px">Dieser Test läuft vollständig in deinem Browser. Deine Antworten
-  werden <b>nicht gesendet</b> und landen auf keinem Server — auch nicht bei uns.
-  Am Ende bekommst du einen Text zum Kopieren, den du behältst oder weitergibst.</p>
+  margin-bottom:18px">Dieser Test läuft in deinem Browser, und dein Ergebnis erscheint
+  <b>sofort und ohne dass etwas übertragen wird</b>. Am Ende kannst du es dir schicken
+  lassen — dann, und nur dann, gehen deine Antworten an uns. Wenn du das nicht willst,
+  kopierst du dir den Ergebnistext und niemand sonst sieht ihn.</p>
   <div class="zitat"><p>„Wir sind, was wir wiederholt tun.
   Vortrefflichkeit ist deshalb keine Tat, sondern eine Gewohnheit."</p>
   <cite>Will Durant über Aristoteles, 1926</cite></div>
@@ -1432,7 +1483,26 @@ function ergebnis(){
     <button class="go" onclick="kopieren(this)">Ergebnis kopieren</button>
     <button class="ghost" onclick="location.reload()">Noch einmal</button></div>
   <div class="copybox"><textarea id="erg" readonly>${esc(ergebnistext(r))}</textarea></div>
-  <div class="foot">Habit Score · Testset vom ${TESTSET_STAND} · ${AKTIV.length} Gewohnheiten · Messungen nur lokal in diesem Browser.</div>`;
+
+  <h3 id="schicken">Ergebnis per Mail</h3>
+  <p>Bis hierher ist nichts übertragen worden. Wenn du dein Ergebnis per Mail bekommen
+  möchtest, trag Name und Adresse ein — wir schicken dir denselben Text, der oben steht,
+  und behalten eine Kopie. Damit lässt sich später vergleichen, was sich bei dir bewegt hat.</p>
+  <p class="hint">Gespeichert werden: dein Name, deine Mailadresse, deine Antworten und die
+  daraus errechneten Werte. Nichts davon geht an Dritte. Du kannst jederzeit verlangen, dass
+  wir es löschen — eine Mail genügt.</p>
+  <div class="senden">
+    <label for="sName">Name</label>
+    <input type="text" id="sName" autocomplete="name" placeholder="Vorname Nachname">
+    <label for="sMail">E-Mail</label>
+    <input type="email" id="sMail" autocomplete="email" placeholder="du@beispiel.de">
+    <input type="text" id="sWeb" tabindex="-1" autocomplete="off" aria-hidden="true"
+           style="position:absolute;left:-9999px;width:1px;height:1px">
+  </div>
+  <div class="nav" style="margin-top:12px">
+    <button class="go" id="sKnopf" onclick="schicken(this)">Ergebnis schicken</button></div>
+  <p id="sMeldung" class="hint" style="min-height:1.4em"></p>
+  <div class="foot">Habit Score · Testset vom ${TESTSET_STAND} · ${AKTIV.length} Gewohnheiten · Auswertung im Browser, Übertragung nur auf deinen Wunsch.</div>`;
 
   const teile = voll.split("<!--SEITENWECHSEL-->");
   const kopfTeil = teile[0].slice(0, teile[0].indexOf('<h2>'));
