@@ -1,7 +1,8 @@
 # Habit Score
 
-Ein Selbsttest zu Gewohnheiten: 80 konkrete Verhaltensweisen in 15 Lebensbereichen,
-ausgewertet als Stand je Bereich, groesste Hebel und 168-Stunden-Wochenbilanz.
+Ein Selbsttest zu Gewohnheiten: 87 konkrete Verhaltensweisen in 15 Verhaltensdomaenen,
+ausgewertet als Stand je Bereich, groesste Hebel, Anspruch gegen gelebtes Verhalten und
+168-Stunden-Wochenbilanz.
 
 **Der Test laeuft vollstaendig im Browser des Nutzers.** Es gibt kein Backend, kein
 Konto und keine Datenuebertragung — Antworten und Verlauf liegen ausschliesslich im
@@ -10,9 +11,23 @@ Konto und keine Datenuebertragung — Antworten und Verlauf liegen ausschliessli
 `index.html` ist eine einzelne, eigenstaendige Datei: Schriften, Logo und Testdaten
 sind eingebettet, es werden keine externen Ressourcen geladen.
 
-Fragensatz eingefroren am 03.09.2026 (80 Items). Aenderungen gehen in eine v9, damit
-Messungen ueber die Zeit vergleichbar bleiben.
+## Nicht hier bearbeiten
 
-Erzeugt aus dem Arbeitsstand in `Habit Score/` — nicht hier bearbeiten.
+Die Datei wird gebaut, nicht geschrieben:
+
+    python3 scripts/baue_habitscore.py        (im Repo "Claude AIOS")
+
+Quellen sind `Habit Score/vorlage/habitscore_template.html` (Aussehen und Auswertung)
+und `Habit Score/Prototyp/testset_v9.json` (die Fragen). Der Runner prueft den
+eingefrorenen Fragensatz, rechnet die JS-Auswertung gegen die Python-Nachrechnung und
+klickt sich durch zehn vollstaendige Durchlaeufe.
+
+Ob die hier liegende Datei wirklich aus dieser Kette stammt:
+
+    python3 scripts/build_habitscore_prototyp_v9.py --pruefen
+
+Fragensatz eingefroren am 10.09.2026 (87 Items). Aenderungen an den Fragen gehen in eine
+neue Fassung nach einer vollstaendigen Messrunde, sonst sind Messungen ueber die Zeit
+nicht mehr vergleichbar.
 
 © If You Change · High Performance Mentoring
