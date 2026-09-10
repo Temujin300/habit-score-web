@@ -693,8 +693,37 @@ function kopieren(btn){
   setTimeout(() => { btn.textContent = "Ergebnis kopieren"; }, 2500);
 }
 
-const fortschritt = () => Math.round(100 * seite / Math.max(N - 1, 1));
+/* 🔴 Der Balken zaehlte Seiten, nicht Fragen — und die Seiten sind sehr verschieden
+   lang: Gesundheit stellt 34 Fragen, Finanzen 5. Nach dem laengsten Block der ganzen
+   Strecke ruckte er genauso weit wie nach dem kuerzesten, und wer nach 34 Fragen bei
+   "Bereich 3 von 14" stand, sah nicht, dass er in Wahrheit schon ein Viertel hinter
+   sich hatte. Gezaehlt wird jetzt, was der Ausfuellende auch zaehlt: beantwortete
+   Fragen. Die vier Rahmenfragen (Situation, Wichtigkeit, Kompetenz, Woche) zaehlen wie
+   je eine Frage mit, damit der Balken vor der ersten Gewohnheit nicht auf 0 klebt.
+   Anlass: die Abbruchanalyse des Personality Score vom 10.09.2026 — dort steigen 27,2 %
+   genau dort aus, wo ein Block endet und unsichtbar noch 70 Fragen folgen
+   (outputs/tests-abbruchanalyse.md). */
+function beantwortet(){
+  return AKTIV.filter(i => antw[i.pos] !== undefined && antw[i.pos] >= 0).length;
+}
+function rahmenFertig(){
+  return (situation ? 1 : 0)
+       + (BEREICHE.every(b => wichtig[b] !== undefined) ? 1 : 0)
+       + (Object.keys(komp).length ? 1 : 0)
+       + (arbeitW !== null ? 1 : 0);
+}
+function fortschritt(){
+  if (seite > SEITEN.length + 4) return 100;          // Ergebnisseite
+  const ganz = AKTIV.length + 4;
+  return Math.min(100, Math.round(100 * (beantwortet() + rahmenFertig()) / Math.max(ganz, 1)));
+}
+/* Der Zaehler steht nur auf den Bereichsseiten. Auf den vier Rahmenseiten stuende dort
+   "0 von 153", waehrend der Ausfuellende gerade antwortet — das liest sich wie ein
+   Fehler, nicht wie ein Fortschritt. */
 const kopf = (t,u) => `<div class="bar"><i style="width:${fortschritt()}%"></i></div>
+  ${seite >= 3 && seite <= SEITEN.length + 2
+    ? `<p class="hint" style="margin:-24px 0 16px;font-size:12.5px">${beantwortet()} von ${AKTIV.length} Fragen</p>`
+    : ``}
   <h2>${esc(u)}</h2><h1>${esc(t)}</h1>`;
 
 /* 🔴 Zwei Meldungen von Frank am 03.09.2026, beide dieselbe Ursache: render() sprang
@@ -733,6 +762,7 @@ function render(halten){
     const e = document.getElementById(halten);
     if (e && e.scrollIntoView) e.scrollIntoView({block:'start'});
   }
+  zwischenSchreiben();
   hoeheMelden();
 }
 
@@ -776,13 +806,28 @@ if (eingebettet() && typeof ResizeObserver === "function"){
 
 function intro(){
   const f = AKTIV.filter(i => i.gewicht === 5).length;
+  // Ein angefangener Test wird angeboten, nicht stillschweigend geladen: an einem
+  // geteilten Rechner sonst fremde Antworten unter eigenem Namen.
+  const z = zwischenLesen();
+  const stehen = z ? Object.values(z.antw || {}).filter(v => v >= 0).length : 0;
+  const wann = z ? new Date(z.zeit).toLocaleDateString('de-DE',
+                   {day:'2-digit', month:'2-digit', year:'numeric'}) : "";
+  const weiter = !z ? `` : `<div style="border:1px solid var(--gold);border-radius:8px;
+  padding:14px;margin-bottom:22px">
+  <p style="margin:0 0 4px"><b>Du hast diesen Test schon angefangen.</b></p>
+  <p class="hint" style="margin:0">${stehen} von ${AKTIV.length} Fragen stehen, zuletzt am ${wann}.</p>
+  <div class="nav" style="margin-top:12px">
+   <button class="go" onclick="zwischenAufnehmen()">Da weitermachen</button>
+   <button class="ghost" onclick="zwischenVerwerfen()">Von vorn anfangen</button></div></div>`;
   app.innerHTML = `<div class="bar"><i style="width:0%"></i></div>
-  <h2>Habit Score</h2><h1>Was hältst du wirklich?</h1>
+  <h2>Habit Score</h2><h1>Was hältst du wirklich?</h1>${weiter}
   <p class="hint" style="border:1px solid var(--line);border-radius:8px;padding:12px 14px;
   margin-bottom:18px">Dieser Test läuft in deinem Browser, und dein Ergebnis erscheint
   <b>sofort und ohne dass etwas übertragen wird</b>. Am Ende kannst du es dir schicken
   lassen — dann, und nur dann, gehen deine Antworten an uns. Wenn du das nicht willst,
-  kopierst du dir den Ergebnistext und niemand sonst sieht ihn.</p>
+  kopierst du dir den Ergebnistext und niemand sonst sieht ihn.<br>
+  Deine Zwischenstände speichert der Test in diesem Browser, damit ein geschlossenes
+  Fenster nicht alles kostet. Auch die verlassen dein Gerät nicht.</p>
   <div class="zitat"><p>„Wir sind, was wir wiederholt tun.
   Vortrefflichkeit ist deshalb keine Tat, sondern eine Gewohnheit."</p>
   <cite>Will Durant über Aristoteles, 1926</cite></div>
@@ -1686,6 +1731,67 @@ function inventarBlock(r){
    ===================================================================== */
 const SCHLUESSEL = "habitscore_verlauf_v1";
 const TESTSET_STAND = "10.09.2026 (v12 — zehn Achsen)";
+
+/* =====================================================================
+   Zwischenstand: der angefangene Test ueberlebt Reload, Fenster zu und
+   den versehentlichen Zurueck-Knopf.
+   🔴 Warum: 153 Fragen am Stueck. Bis zum 10.09.2026 war ein Reload der
+   Totalverlust — und die Abbruchanalyse des Personality Score zeigt,
+   dass genau an solchen Stellen ein Viertel der Teilnehmer verschwindet.
+   Der Stand liegt wie der Verlauf ausschliesslich in DIESEM Browser. Es
+   geht nichts an einen Server, die Zusage im Intro bleibt damit wahr.
+   🔴 Jeder Zugriff in try/catch: privater Modus und geloeschte Website-
+   daten lassen localStorage werfen, nicht nur leer sein.
+   ===================================================================== */
+const ZW_SCHLUESSEL = "habitscore_zwischenstand_v1";
+
+function zwischenLesen(){
+  try {
+    const roh = localStorage.getItem(ZW_SCHLUESSEL);
+    if (!roh) return null;
+    const z = JSON.parse(roh);
+    // Ein neuer Fragensatz macht alte Positionen wertlos — die Nummern zeigen dann auf
+    // andere Fragen. Lieber von vorn anfangen als still falsch zuordnen.
+    return (z && z.stand === TESTSET_STAND) ? z : null;
+  } catch(e){ return null; }
+}
+
+function zwischenSchreiben(){
+  if (seite === 0) return;              // vor dem Anfangen gibt es nichts zu sichern
+  try {
+    localStorage.setItem(ZW_SCHLUESSEL, JSON.stringify({
+      stand: TESTSET_STAND, zeit: new Date().toISOString(),
+      seite: seite, situation: situation, antw: antw,
+      wichtig: wichtig, komp: komp, regeln: regeln, regelnAn: regelnAn,
+      raus: Array.from(RAUS),
+      bettN: bettN, schlafN: schlafN, arbeitW: arbeitW, grundW: grundW}));
+  } catch(e){}
+}
+
+function zwischenVerwerfen(){
+  try { localStorage.removeItem(ZW_SCHLUESSEL); } catch(e){}
+  render();
+}
+
+function zwischenAufnehmen(){
+  const z = zwischenLesen();
+  if (!z) return;
+  situation = z.situation;
+  regelnAn = !!z.regelnAn;
+  bettN = z.bettN; schlafN = z.schlafN; arbeitW = z.arbeitW;
+  grundW = (z.grundW === undefined ? 21 : z.grundW);
+  RAUS.clear();
+  (z.raus || []).forEach(pos => RAUS.add(pos));
+  // seitenAufbauen() raeumt antw auf, deshalb erst danach die Antworten einsetzen.
+  seitenAufbauen();
+  Object.assign(antw, z.antw || {});
+  AKTIV = ITEMS.filter(i => passt(i) && !RAUS.has(i.pos));
+  wichtig = Object.assign({}, z.wichtig || {});
+  komp    = Object.assign({}, z.komp || {});
+  regeln  = Object.assign({}, z.regeln || {});
+  seite = z.seite;
+  render();
+}
 
 function verlaufLesen(){
   try {
