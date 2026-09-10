@@ -641,6 +641,49 @@ function ergebnistext(r){
 // damit die Ergebnisse spaeter zusammen auswertbar sind statt in vier Ablagen zu liegen.
 const SPEICHERN = "https://yourmastermind.de/tests/speichern.php";
 
+/* =====================================================================
+   Anonyme Verlaufsmeldung — die einzige Frage, die sonst niemand
+   beantworten kann: WO hoeren die Leute auf.
+   🔴 Warum ueberhaupt: Bis heute entsteht ein Datensatz erst, wenn jemand
+   am Ende seine Adresse eintraegt. Wer abbricht, taucht nirgends auf. Die
+   Abbruchanalyse des Personality Score vom 10.09.2026 war nur moeglich,
+   weil jene App blockweise schrieb — und selbst dort blieb alles
+   unterhalb der Blockgrenze unsichtbar (outputs/tests-abbruchanalyse.md).
+   🔴 Was NICHT gesendet wird: keine Antworten, kein Name, keine Adresse.
+   Nur Testname, Seitennummer und eine Zufallszahl, die ausschliesslich im
+   Arbeitsspeicher dieser offenen Seite lebt und beim Schliessen vergeht.
+   Sie landet ausdruecklich NICHT in localStorage und in keinem Cookie —
+   genau daran haengt die Einwilligungspflicht nach TTDSG, und ohne
+   Speicherung auf dem Geraet entsteht keine.
+   🔵 Fehler bleiben still: die Meldung ist Beiwerk, sie darf einen
+   laufenden Test nie stoeren.
+   ===================================================================== */
+const SITZUNG = Math.random().toString(36).slice(2, 14);
+let zuletztGemeldet = -1;
+
+function melden(ereignis){
+  try {
+    fetch(SPEICHERN, {method:"POST", keepalive:true,
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({test:"habit-score", stand:TESTSET_STAND, ereignis:ereignis,
+                            seite:seite, von:Math.max(N - 1, 1), sitzung:SITZUNG})})
+      .catch(() => {});
+  } catch(e){}
+}
+
+/* Gemeldet wird nur der Wechsel, nicht jede Antwort: render(true) zeichnet
+   dieselbe Seite neu, sobald jemand einen Regler bewegt. Bei 34 Fragen auf
+   einer Seite waeren das sonst 34 Meldungen fuer einen Seitenaufruf. */
+function verlaufMelden(){
+  if (seite === zuletztGemeldet) return;
+  const vorher = zuletztGemeldet;
+  zuletztGemeldet = seite;
+  if (vorher === -1) return;                       // der Aufbau selbst ist kein Ereignis
+  if (vorher === 0) melden("start");               // das Intro verlassen
+  else if (seite > SEITEN.length + 4) melden("ende");   // Ergebnisseite erreicht
+  else melden("seite");
+}
+
 function schicken(btn){
   const meldung = document.getElementById('sMeldung');
   const name = (document.getElementById('sName')||{}).value || "";
@@ -671,8 +714,9 @@ function schicken(btn){
   fetch(SPEICHERN, {method:"POST", headers:{"Content-Type":"application/json"},
                     body: JSON.stringify(satz)})
     .then(a => a.ok ? a.text() : Promise.reject("HTTP " + a.status))
-    .then(() => sagen("Geschickt. Die Mail ist unterwegs — sieh auch im Spam nach.",
-                      "var(--ok)"))
+    .then(() => { melden("gesendet");
+                  sagen("Geschickt. Die Mail ist unterwegs — sieh auch im Spam nach.",
+                        "var(--ok)"); })
     .catch(f => { if (btn) btn.disabled = false;
       sagen("Das hat nicht geklappt (" + f + "). Kopier dir den Text oben, dann geht "
             + "nichts verloren.", "var(--bad)"); });
@@ -763,6 +807,7 @@ function render(halten){
     if (e && e.scrollIntoView) e.scrollIntoView({block:'start'});
   }
   zwischenSchreiben();
+  verlaufMelden();
   hoeheMelden();
 }
 
