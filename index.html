@@ -303,13 +303,31 @@ function gew(sel){
   return Math.round(n / d * 10) / 10;
 }
 
+/* Mittel der Lebensbereiche: je Bereich der item-gewichtete Wert, darueber ungewichtet
+   gemittelt. Bereiche ohne Items fallen raus, statt als 0 zu zaehlen. */
+function mittelUeberBereiche(){
+  const werte = BEREICHE
+    .filter(b => AKTIV.some(i => i.lb === b))
+    .map(b => gew(AKTIV.filter(i => i.lb === b)));
+  if (!werte.length) return gew(AKTIV);
+  return Math.round(werte.reduce((a, b) => a + b, 0) / werte.length * 10) / 10;
+}
+
 function auswerten(){
   const r = {};
   // Zehn Wochen: kurz genug, dass man sich erinnert, lang genug, dass sich Verhalten
   // ueberhaupt bewegt haben kann. Ohne Datum wird aus dem Test ein Einmalprodukt.
   const w = new Date(); w.setDate(w.getDate() + 70);
   r.wiedermessung = w.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
-  r.erfuellung = gew(AKTIV);
+  /* 🔴 Der Gesamtwert ist das Mittel der sechs LEBENSBEREICHE, nicht das Mittel aller
+     Items. Frank am 10.09.2026: „hier brauchen wir mehr Balance zu Gunsten Finanzen."
+     Persoenliche Entwicklung stellt 62 der 153 Fragen und bestimmte damit 40 Prozent
+     des Ergebnisses, Finanzen mit 12 Fragen keine 8 — wer sich persoenlich stark und
+     finanziell schwach aufstellt, bekam trotzdem einen guten Gesamtwert. Jeder Bereich
+     zaehlt jetzt gleich viel, unabhaengig davon, wie viele Fragen er stellt.
+     Die Fragenzahl bleibt trotzdem eine Frage der Messgenauigkeit: sie steht je Bereich
+     auf der Ergebnisseite, und die Lueckenschwelle rechnet sie ueber seBereich() ein. */
+  r.erfuellung = mittelUeberBereiche();
   r.fundament = gew(AKTIV.filter(i => i.gewicht === 5));
   r.stufe_roh = stufe(r.erfuellung);
   r.stufe = RANG[Math.min(RANG.indexOf(r.stufe_roh), deckel(r.fundament))];
@@ -1775,7 +1793,7 @@ function inventarBlock(r){
    Die Daten liegen ausschliesslich in diesem Browser. Deshalb der Export.
    ===================================================================== */
 const SCHLUESSEL = "habitscore_verlauf_v1";
-const TESTSET_STAND = "10.09.2026 (v12 — zehn Achsen)";
+const TESTSET_STAND = "10.09.2026 (v12 — zehn Achsen, Gesamtwert je Bereich)";
 
 /* =====================================================================
    Zwischenstand: der angefangene Test ueberlebt Reload, Fenster zu und
