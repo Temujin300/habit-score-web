@@ -108,6 +108,11 @@ margin-right:6px;background:var(--gold)}
 textarea{width:100%;height:180px;background:#0F0E0D;border:1px solid var(--line);
 color:var(--dim);border-radius:6px;padding:12px;font:12px/1.5 ui-monospace,SFMono-Regular,
 Menlo,monospace;resize:vertical}
+.lead{font-size:19px;line-height:1.55;color:#EDEDED;margin:.2em 0 1em}
+.meta{color:var(--dim);font-size:15px;margin:0 0 4px}
+.mehr{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;font-size:15px}
+.mehr summary{cursor:pointer;color:var(--gold)}
+.mehr p{margin:10px 0}
 .zitat{border-left:2px solid var(--gold);padding:4px 0 4px 18px;margin:26px 0 30px}
 .zitat p{font-size:19px;line-height:1.5;color:var(--fg);margin:0 0 8px;font-weight:400}
 .zitat cite{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
@@ -724,6 +729,8 @@ function schicken(btn){
     kennzahlen: {erfuellung:r.erfuellung, fundament:r.fundament, konsistenz:r.konsistenz,
                  kompetenz:r.kompetenz, decke:r.decke, gewertet:r.gewertet},
     antworten: Object.fromEntries(AKTIV.map(i => [i.id, antw[i.pos]])),
+    // Opt-in: ohne Haken schickt der Erinnerungslauf nichts.
+    erinnerung: (document.getElementById('sErinnerung') || {}).checked === true,
     text: ergebnistext(r),
     web: (document.getElementById('sWeb')||{}).value || ""
   };
@@ -883,51 +890,53 @@ function intro(){
    <button class="go" onclick="zwischenAufnehmen()">Da weitermachen</button>
    <button class="ghost" onclick="zwischenVerwerfen()">Von vorn anfangen</button></div></div>`;
   app.innerHTML = `<div class="bar"><i style="width:0%"></i></div>
-  <h2>Habit Score</h2><h1>Was hältst du wirklich?</h1>${weiter}
-  <p class="hint" style="border:1px solid var(--line);border-radius:8px;padding:12px 14px;
-  margin-bottom:18px">Dieser Test läuft in deinem Browser, und dein Ergebnis erscheint
-  <b>sofort und ohne dass etwas übertragen wird</b>. Am Ende kannst du es dir schicken
-  lassen — dann, und nur dann, gehen deine Antworten an uns. Wenn du das nicht willst,
-  kopierst du dir den Ergebnistext und niemand sonst sieht ihn.<br>
-  Deine Zwischenstände speichert der Test in diesem Browser, damit ein geschlossenes
-  Fenster nicht alles kostet. Auch die verlassen dein Gerät nicht.</p>
-  <div class="zitat"><p>„Wir sind, was wir wiederholt tun.
-  Vortrefflichkeit ist deshalb keine Tat, sondern eine Gewohnheit."</p>
-  <cite>Will Durant über Aristoteles, 1926</cite></div>
-  <div class="zitat"><p>„Aus verkehrtem Willen entsteht die Begierde; dient man der Begierde,
-  entsteht die Gewohnheit; widersteht man der Gewohnheit nicht, entsteht die Notwendigkeit."</p>
-  <cite>Augustinus, Bekenntnisse VIII, 5</cite></div>
-  <p>Bis zu ${ITEMS.length} Gewohnheiten, ausgewählt aus über 600 Kandidaten. Jede hat eine feste
-  Soll-Frequenz — du sagst nur, wie zuverlässig du sie tatsächlich einhältst.
-  Davor sechs Fragen dazu, was dir wichtig ist, danach acht dazu, wie du Gewohnheiten
-  überhaupt aufbaust. Rund ${Math.round(ITEMS.length * 6 / 60)} Minuten.</p>
-  <h3>Was am Ende herauskommt</h3>
-  <p>Der Kern ist nicht der Punktwert. Es ist die Stelle, an der das, was du für wichtig
-  erklärst, und das, was du tatsächlich tust, auseinandergehen. Deshalb die sechs Fragen
-  am Anfang: ohne sie wäre das hier nur eine Liste.</p>
-  <p>Es geht nicht darum, wie du bist, sondern was du tust. Antworte nach den letzten
-  vier Wochen, nicht nach deinem Vorsatz.</p>
-  <h3>Erst das Verhalten, dann das Ergebnis</h3>
-  <p>Dieser Test misst nur Verhalten. Das ist Absicht: Ergebnisse — Gewicht, Geld,
-  Beförderung — kommen später und hängen auch an Dingen, die du nicht steuerst.
-  Verhalten steuerst du heute.</p>
-  <p>Deshalb liest man in dieser Reihenfolge: erst, ob du getan hast, was du dir
+  <h2>Habit Score</h2><h1>Wie gut ist dein Gewohnheits-Management?</h1>${weiter}
+  <p class="lead">Nicht wer du bist, sondern was du tust. Der Test vergleicht, was du
+  für wichtig erklärst, mit dem, was du in den letzten vier Wochen tatsächlich
+  gehalten hast. Die Lücke dazwischen ist das Ergebnis — und die Stelle, an der du
+  ansetzt.</p>
+  <p class="meta">Bis zu ${ITEMS.length} Gewohnheiten &middot; rund
+  ${Math.round(ITEMS.length * 6 / 60)} Minuten &middot; läuft in deinem Browser,
+  Ergebnis sofort und ohne Anmeldung</p>
+  <div class="nav"><button class="go" onclick="weiter()">Anfangen</button></div>
+
+  <details class="mehr"><summary>Wie der Test rechnet</summary>
+  <p>Jede Gewohnheit hat eine feste Soll-Frequenz — du sagst nur, wie zuverlässig du
+  sie einhältst. Davor sechs Fragen dazu, was dir wichtig ist, danach acht dazu, wie
+  du Gewohnheiten überhaupt aufbaust. Ohne die sechs Fragen am Anfang wäre das hier
+  nur eine Liste.</p>
+  <p>Jede Gewohnheit trägt ein Gewicht von 1 bis 5. ${f} davon sind
+  <b style="color:var(--gold)">Fundament</b>: fällt eine weg, bricht anderes mit.
+  Wie schwer eine Gewohnheit ist, geht in die Bewertung ausdrücklich <em>nicht</em>
+  ein — nur in die Frage, was du als Nächstes angehst.</p>
+  <p>Am Ende steht keine Schätzfrage zur Zeit. Aus deinen Antworten ergibt sich, was
+  deine Gewohnheiten kosten, was die Zeitfresser dir nehmen und ob die Zeit für dein
+  Fundament überhaupt fehlt — oder nur woanders gebunden ist.</p>
+  </details>
+
+  <details class="mehr"><summary>Warum Verhalten und nicht Ergebnis</summary>
+  <p>Dieser Test misst nur Verhalten. Ergebnisse — Gewicht, Geld, Beförderung — kommen
+  später und hängen auch an Dingen, die du nicht steuerst. Verhalten steuerst du heute.
+  Deshalb liest man in dieser Reihenfolge: erst, ob du getan hast, was du dir
   vorgenommen hattest. Und erst danach, was dabei herausgekommen ist.</p>
   <table class="tab"><tr><th></th><th>Ergebnis gut</th><th>Ergebnis schlecht</th></tr>
   <tr><td>Verhalten gut</td><td>Weiter so.</td>
       <td>Der Plan ist falsch, nicht du.</td></tr>
   <tr><td>Verhalten schlecht</td><td>Glück gehabt, nicht Können.</td>
       <td>Hier setzt du an.</td></tr></table>
-  <h3>Nicht alle zählen gleich</h3>
-  <p>Jede Gewohnheit trägt ein Gewicht von 1 bis 5. ${f} davon sind
-  <b style="color:var(--gold)">Fundament</b>: fällt eine weg, bricht anderes mit.
-  Wie schwer eine Gewohnheit ist, geht in die Bewertung ausdrücklich <em>nicht</em> ein —
-  nur in die Frage, was du als Nächstes angehst.</p>
-  <h3>Zeit wird gerechnet, nicht gefragt</h3>
-  <p>Am Ende steht keine Schätzfrage. Aus deinen Antworten ergibt sich, was deine
-  Gewohnheiten kosten, was die Zeitfresser dir nehmen und ob die Zeit für dein
-  Fundament überhaupt fehlt — oder nur woanders gebunden ist.</p>
-  <div class="nav"><button class="go" onclick="weiter()">Anfangen</button></div>`;
+  <div class="zitat"><p>„Wir sind, was wir wiederholt tun.
+  Vortrefflichkeit ist deshalb keine Tat, sondern eine Gewohnheit."</p>
+  <cite>Will Durant über Aristoteles, 1926</cite></div>
+  </details>
+
+  <details class="mehr"><summary>Was mit deinen Antworten passiert</summary>
+  <p>Der Test läuft in deinem Browser, dein Ergebnis erscheint <b>sofort und ohne dass
+  etwas übertragen wird</b>. Am Ende kannst du es dir schicken lassen — dann, und nur
+  dann, gehen deine Antworten an uns. Wenn du das nicht willst, kopierst du dir den
+  Ergebnistext und niemand sonst sieht ihn. Deine Zwischenstände speichert der Test in
+  diesem Browser, damit ein geschlossenes Fenster nicht alles kostet. Auch die
+  verlassen dein Gerät nicht.</p>
+  </details>`;
 }
 
 function situationsfrage(){
@@ -1607,6 +1616,10 @@ function ergebnis(){
     <input type="text" id="sWeb" tabindex="-1" autocomplete="off" aria-hidden="true"
            style="position:absolute;left:-9999px;width:1px;height:1px">
   </div>
+  <p style="margin-top:10px"><label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer">
+    <input type="checkbox" id="sErinnerung" style="margin-top:4px">
+    <span>Erinnere mich in zehn Wochen an die Wiedermessung. Ein einzelner Wert sagt wenig,
+      die Bewegung sagt alles.</span></label></p>
   <div class="nav" style="margin-top:12px">
     <button class="go" id="sKnopf" onclick="schicken(this)">Ergebnis schicken</button></div>
   <p id="sMeldung" class="hint" style="min-height:1.4em"></p>
