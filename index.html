@@ -928,12 +928,16 @@ function erkenntnisse(r){
     const t = r.luecken[0];
     add(t.luecke * t.wichtig / 50,
       "Der Bereich, der dir wichtig ist und am wenigsten läuft",
+      // 🔴 Die Luecke wird aus den ANGEZEIGTEN Zahlen gerechnet. Vorher stand hier der
+      // ungerundete Wert neben einem auf Fuenferschritte gerundeten Stand — „lebst ihn bei
+      // 55, Luecke 43 Punkte" liest sich wie ein Rechenfehler, obwohl beide Zahlen stimmen.
       `<b>${esc(t.label)}</b> hast du als „${esc((WICHTIG_SKALA.find(s => s[1] === t.wichtig)||['—'])[0])}“
        eingeordnet und lebst ihn bei <b>${Math.round(t.gelebt/5)*5} von 100</b>. Das ist eine Lücke
-       von ${Math.round(t.luecke)} Punkten — die größte zwischen deinem Anspruch und deinem Verhalten.`);
+       von ${t.wichtig - Math.round(t.gelebt/5)*5} Punkten — die größte zwischen deinem Anspruch
+       und deinem Verhalten.`);
   }
   if (r.ueberinvestiert.length){
-    const u = r.ueberinvestiert[0], d = Math.round(u.gelebt - u.wichtig);
+    const u = r.ueberinvestiert[0], d = Math.round(u.gelebt/5)*5 - u.wichtig;
     add(d * 0.9,
       "Und die Stelle, an der du mehr tust, als dir wichtig ist",
       `<b>${esc(u.label)}</b> läuft bei <b>${Math.round(u.gelebt/5)*5}</b>, im Rang steht der Bereich
@@ -988,8 +992,10 @@ function erkenntnisse(r){
   }
   const si = r.schwaechste_achse;
   if (si && si.wert < 55)
-    add(60 - si.wert,
-      "Deine schwächste Intelligenz",
+    // Etwas schwerer gewichtet als die Domaene: eine schwache Achse ist ein ganzes Feld,
+    // eine schwache Domaene nur eine Art von Gewohnheit.
+    add((60 - si.wert) * 1.2,
+      "Deine schwächste Achse",
       `<b>${esc(al(si.name))}</b> steht bei <b>${Math.round(si.wert/5)*5}</b> und liegt damit
        deutlich unter allem anderen. Das ist eine ganze Ebene, die bei dir nicht gelebt
        wird — nicht eine einzelne Gewohnheit.`);
